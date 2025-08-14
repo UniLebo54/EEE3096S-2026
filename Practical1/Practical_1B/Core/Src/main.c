@@ -51,7 +51,11 @@
   checksum: should be uint64_t
   initial width and height maybe or you might opt for an array??
 */
-
+const int image_sizes[] = {128, 160, 192, 224, 256}
+uint64_t checksum = 0;
+uint32_t start_time = 0;
+uint32_t end_time = 0;
+uint32_t execution_time;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,30 +103,32 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   //TODO: Turn on LED 0 to signify the start of the operation
-  
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
   //TODO: Record the start time
-  
+  start_time = HAL_GetTick();
   
   //TODO: Call the Mandelbrot Function and store the output in the checksum variable defined initially
-  
+  checksum = calculate_mandelbrot_double(128, 128, MAX_ITER);
 
   //TODO: Record the end time
-  
+  end_time = HAL_GetTick();
 
   //TODO: Calculate the execution time
-  
+  execution_time =end_time - start_time;
 
   //TODO: Turn on LED 1 to signify the end of the operation
-  
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
 
   //TODO: Hold the LEDs on for a 1s delay
-  
+  HAL_Delay(1000);
 
   //TODO: Turn off the LEDs
-  
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
   /* USER CODE END 2 */
+
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -202,9 +208,38 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 //TODO: Mandelbroat using variable type integers and fixed point arithmetic
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations){
-  uint64_t mandelbrot_sum = 0;
+    const int64_t SCALE = 1000000LL; // scale factor for fixed point
+    const int64_t SCALE_2P0 = 2000000LL;  // 2.0 * SCALE
+    const int64_t SCALE_3P5 = 3500000LL;  // 3.5 * SCALE
+    const int64_t SCALE_2P5 = 2500000LL;  // 2.5 * SCALE
+    const int64_t SCALE_4P0 = 4000000LL;  // 4.0 * SCALE
+    uint64_t mandelbrot_sum = 0;
     //TODO: Complete the function implementation
-    
+    for (int y = 0; y < height; y++) {
+      int64_t y0 = ((int64_t)y * SCALE_2P0) / height - SCALE; // (y/height)*2.0 - 1.0
+      for (int x = 0; x < width; x++) {
+        int64_t x0 = ((int64_t)x * SCALE_3P5) / width - SCALE_2P5;
+
+        int64_t xi = 0;
+        int64_t yi = 0;
+        int iteration = 0;
+
+        while (iteration < max_iterations) {
+            int64_t xi_sq = (xi * xi) / SCALE;
+            int64_t yi_sq = (yi * yi) / SCALE;
+
+            if ((xi_sq + yi_sq) > SCALE_4P0) break;
+
+            int64_t xtemp = xi_sq - yi_sq;
+            yi = ((2 * xi * yi) / SCALE) + y0;
+            xi = xtemp + x0;
+
+            iteration++;
+          }
+
+          mandelbrot_sum += iteration;
+        }
+      }
     return mandelbrot_sum;
 
 }
@@ -213,9 +248,28 @@ uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int 
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations){
     uint64_t mandelbrot_sum = 0;
     //TODO: Complete the function implementation
-    
+    for (int y = 0; y < height; y++) {
+      double y0 = ((double)y * 2.0 / (double)height) - 1.0;
+      for (int x = 0; x < width; x++) {
+          double x0 = ((double)x * 3.5 / (double)width) - 2.5;
+
+          double xi = 0.0;
+          double yi = 0.0;
+          int iteration = 0;
+
+          while (iteration < max_iterations && (xi * xi + yi * yi <= 4.0)) {
+              double xtemp = xi * xi - yi * yi;
+              yi = 2.0 * xi * yi + y0;
+              xi = xtemp + x0;
+              iteration++;
+            }
+
+          mandelbrot_sum += iteration;
+        }
+      }
     return mandelbrot_sum;
 }
+
 
 /* USER CODE END 4 */
 
