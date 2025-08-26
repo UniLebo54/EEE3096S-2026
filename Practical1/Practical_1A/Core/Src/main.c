@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include "stm32f0xx.h"
+#include <stm32f051x8.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +46,21 @@ TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
 // TODO: Define input variables
+uint8_t mode = 0;
+uint8_t led_index = 0;
+int8_t direction = 1;
+uint8_t delay_toggle = 0;
+uint8_t do_sparkle = 0;
 
+const uint32_t LED_Pins[8] = {
+		LED0_Pin, LED1_Pin, LED2_Pin, LED3_Pin,
+	    LED4_Pin, LED5_Pin, LED6_Pin, LED7_Pin
+	};
+
+const GPIO_TypeDef* LED_Ports[8] = {
+	    LED0_GPIO_Port, LED1_GPIO_Port, LED2_GPIO_Port, LED3_GPIO_Port,
+	    LED4_GPIO_Port, LED5_GPIO_Port, LED6_GPIO_Port, LED7_GPIO_Port
+	};
 
 /* USER CODE END PV */
 
@@ -55,6 +70,7 @@ static void MX_GPIO_Init(void);
 static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 void TIM16_IRQHandler(void);
+void run_sparkle_mode(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -93,7 +109,7 @@ int main(void)
 
   // TODO: Start timer TIM16
 
- 
+  HAL_TIM_Base_Start_IT(&htim16);
 
   /* USER CODE END 2 */
 
@@ -107,9 +123,22 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
     // TODO: Check pushbuttons to change timer delay
+	  if (LL_GPIO_IsInputPinSet(Button0_GPIO_Port, Button0_Pin)) {
+	              delay_toggle ^= 1;
+	              if (delay_toggle) {
+	                  __HAL_TIM_SET_AUTORELOAD(&htim16, 500 - 1);
+	              } else {
+	                  __HAL_TIM_SET_AUTORELOAD(&htim16, 1000 - 1);
+	              }
+	              HAL_Delay(200);  // crude debounce
+	          }
+
+	  if (do_sparkle) {
+	              run_sparkle_mode();
+	              do_sparkle = 0;
+	          }
 
 
-    
 
   }
   /* USER CODE END 3 */
@@ -323,12 +352,72 @@ void TIM16_IRQHandler(void)
 
 	// TODO: Change LED pattern
 
+	// Check pushbutton inputs
+	if (!LL_GPIO_IsInputPinSet(Button1_GPIO_Port, Button1_Pin)) mode = 1;
+	if (!LL_GPIO_IsInputPinSet(Button2_GPIO_Port, Button2_Pin)) mode = 2;
+	if (!LL_GPIO_IsInputPinSet(Button3_GPIO_Port, Button3_Pin)) mode = 3;
 
+	switch (mode)
+	{
+		case 1:
+			// Mode 1: one LED ON, back and forth
+			for (int i = 0; i < 8; i++) {
+				LL_GPIO_ResetOutputPin(LED_Ports[i], LED_Pins[i]);
+			}
+			LL_GPIO_SetOutputPin(LED_Ports[led_index], LED_Pins[led_index]);
+			led_index += direction;
+			if (led_index == 7) direction = -1;
+			else if (led_index == 0) direction = 1;
+			break;
 
+		case 2:
+			// Mode 2: all LEDs ON except one
+			for (int i = 0; i < 8; i++) {
+				LL_GPIO_SetOutputPin(LED_Ports[i], LED_Pins[i]);
+			}
+			LL_GPIO_ResetOutputPin(LED_Ports[led_index], LED_Pins[led_index]);
+			led_index += direction;
+			if (led_index == 7) direction = -1;
+			else if (led_index == 0) direction = 1;
+			break;
+		case 3:
+
+			// Mode 3: sparkle
+			 do_sparkle = 1;  // defer sparkle to main loop
+				break;
+
+			default:
+				for (int i = 0; i < 8; i++) {
+					LL_GPIO_ResetOutputPin(LED_Ports[i], LED_Pins[i]);
+				}
+				break;
+		}
 }
+void run_sparkle_mode(void)
+{
+    uint8_t sparkle = rand() % 256;
 
+    for (int i = 0; i < 8; i++) {
+        LL_GPIO_ResetOutputPin(LED_Ports[i], LED_Pins[i]);
+    }
 
+    for (int i = 0; i < 8; i++) {
+        if (sparkle & (1 << i)) {
+            LL_GPIO_SetOutputPin(LED_Ports[i], LED_Pins[i]);
+        }
+    }
+
+    HAL_Delay(100 + rand() % 1401);
+
+    for (int i = 0; i < 8; i++) {
+        if (sparkle & (1 << i)) {
+            LL_GPIO_ResetOutputPin(LED_Ports[i], LED_Pins[i]);
+            HAL_Delay(rand() % 1500);
+        }
+    }
+}
 /* USER CODE END 4 */
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
