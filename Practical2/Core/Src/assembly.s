@@ -100,4 +100,4 @@ MODER_OUTPUT: 		.word 0x5555
 @ TODO: Add your own values for these delays
 
 LONG_DELAY_CNT: 	.word 700000
-SHORT_DELAY_CNT: 	.word 250000
+SHORT_DELAY_CNT: 	.word 300000
