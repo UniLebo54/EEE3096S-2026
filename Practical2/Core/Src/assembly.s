@@ -33,17 +33,18 @@ ASM_Main:
 	MOVS R2, #0         	@ NOTE: R2 will be dedicated to holding the value on the LEDs
 
 @ TODO: Add code, labels and logic for button checks and LED patterns
-		@ default increment 1 every 0.7
-		@check button 0 @SW0 increment 2 evry 0.7
-		@check button 1 @SW1 increment 1 every 0.3
-		@check button 2 @SW2 pattern 0xAA
-		@check button 3 @SW3 stop pattern
-		@check LED patterns
-		@check LED patterns
-		@check LED patterns
 
 main_loop:
-
+	@ default increment 1 every 0.7
+	MOVS R3,#1
+	LDR R4, LONG_DELAY_CNT
+	@check button 0 @SW0 increment 2 evry 0.7
+	@check button 1 @SW1 increment 1 every 0.3
+	@check button 2 @SW2 pattern 0xAA
+	@check button 3 @SW3 stop pattern
+	@check LED patterns
+	@check LED patterns
+	@check LED patterns
 
 write_leds:
 	STR R2, [R1, #0x14]
