@@ -41,6 +41,7 @@ main_loop:
     @ --- Check button states ---
     	LDR R5, GPIOA_BASE
     	LDR R6, [R5, #0x10]      @ IDR register (input data register)
+
     @ Check SW0 (PA0) - increment by 2 when pressed
 	MOVS R7, #0x01           @ Load mask for SW0 (PA0)
 	TST R6, R7               @ Test bit 0 (SW0)
@@ -98,5 +99,5 @@ MODER_OUTPUT: 		.word 0x5555
 
 @ TODO: Add your own values for these delays
 
-LONG_DELAY_CNT: 	.word 750000
-SHORT_DELAY_CNT: 	.word 60000
+LONG_DELAY_CNT: 	.word 700000
+SHORT_DELAY_CNT: 	.word 250000
