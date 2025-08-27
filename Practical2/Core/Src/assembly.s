@@ -38,7 +38,11 @@ main_loop:
     @ default increment 1 every 0.7
 	MOVS R3,#1
 	LDR R4, LONG_DELAY_CNT
-
+    @ --- Check button states ---
+    	LDR R5, GPIOA_IDR
+    	LDR R5, [R5]      @ IDR register (input data register)
+    	LDR R6, [R5]
+    	ANDS R6, R6, R5
     @ Check SW0 (PA0) - increment by 2 when pressed
 	MOVS R7, #0x01           @ Load mask for SW0 (PA0)
 	TST R6, R7               @ Test bit 0 (SW0)
