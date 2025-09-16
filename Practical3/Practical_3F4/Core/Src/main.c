@@ -1,3 +1,5 @@
+adapt this code for stm32f4
+
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -44,14 +46,22 @@
 /* USER CODE BEGIN PV */
 //TODO: Define variables you think you might need
 // - Performance timing variables (e.g execution time, throughput, pixels per second, clock cycles)
+#define MAX_ITER 100
 
+int image_sizes[] = {128, 160, 192, 224, 256};
+
+uint64_t checksum = 0;
+uint32_t start_time = 0;
+uint32_t end_time = 0;
+uint32_t execution_time = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
-//TODO: Define any function prototypes you might need such as the calculate Mandelbrot function among others
+uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
+uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
 
 /* USER CODE END PFP */
 
@@ -90,28 +100,34 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
+  //TODO: Visual indicator: Turn on LED0 to signal processing start
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
+  //TODO: Benchmark and Profile Performance
+  start_time = HAL_GetTick();
+  checksum = calculate_double(128, 128, MAX_ITER);
+  end_time = HAL_GetTick();
+  execution_time = end_time - start_time;
+
+  //TODO: Visual indicator: Turn on LED1 to signal processing start
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+
+  //TODO: Keep the LEDs ON for 2s
+  HAL_Delay(2000);
+
+  // TODO: Turn OFF LEDs
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+	  /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-	  //TODO: Visual indicator: Turn on LED0 to signal processing start
-
-
-	  //TODO: Benchmark and Profile Performance
+	  /* USER CODE BEGIN 3 */
 
 
-	  //TODO: Visual indicator: Turn on LED1 to signal processing start
-
-
-	  //TODO: Keep the LEDs ON for 2s
-
-	  //TODO: Turn OFF LEDs
   }
   /* USER CODE END 3 */
 }
@@ -199,6 +215,65 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 //TODO: Function signatures you defined previously , implement them here
+uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations){
+    uint64_t checksum = 0;
+    const int32_t scale = 1 << 20;
+    const int32_t x_scale = (int32_t)(3.5 * scale);
+    const int32_t y_scale = (int32_t)(2.0 * scale);
+    const int32_t x_offset = (int32_t)(2.5 * scale);
+    const int32_t y_offset = (int32_t)(1.0 * scale);
+    const int32_t diverge_threshold = 4 * scale;
+    //TODO: Complete the function implimentation
+    for (int y = 0; y < height; y++) {
+      int32_t y0 = ((y * y_scale) / height) - y_offset;
+      for(int x =0; x < width; x++){
+    	  int32_t x0 = ((x * x_scale) / width) - x_offset;
+    	  int32_t xi = 0;
+    	  int32_t yi = 0;
+    	  int iteration = 0;
+
+    	  while (iteration < max_iterations){
+    		  int64_t xi_sq = ((int64_t)xi * xi) / scale;
+    		  int64_t yi_sq = ((int64_t)yi * yi) / scale;
+    		  if ((xi_sq + yi_sq) > diverge_threshold) break;
+    		  int64_t temp = xi_sq - yi_sq;
+    		  yi = (2 * ((int64_t)xi * yi) / scale) + y0;
+    		  xi = temp + x0;
+    		  iteration++;
+    	  }
+    	  checksum += iteration;
+      }
+  }
+    return checksum;
+}
+
+//TODO: Mandelbroat using variable type double
+uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations){
+	uint64_t checksum = 0;
+	const double x_scale = 3.5 / width;
+	const double y_scale = 2.0 / height;
+
+	 for ( int y = 0; y < height ; y++){
+		 double y0 = y * y_scale - 1.0;
+		 for (int x=0; x < width; x++){
+			 double x0 = x * x_scale - 2.5;
+			 double xi = 0, yi = 0;
+			 int iteration = 0;
+
+			 while (iteration < max_iterations){
+				 double xi_sq = xi * xi;
+				 double yi_sq = yi * yi;
+				 if (( xi_sq + yi_sq) > 4.0) break;
+				 double temp = xi_sq - yi_sq;
+				 yi = 2 * xi * yi + y0;
+				 xi = temp + x0;
+				 iteration++;
+			 }
+			 checksum += iteration;
+		 }
+	 }
+	 return checksum;
+}
 
 /* USER CODE END 4 */
 
