@@ -44,7 +44,7 @@
 /* USER CODE BEGIN PV */
 //TODO: Define variables you think you might need
 // - Performance timing variables (e.g execution time, throughput, pixels per second, clock cycles)
-#define MAX_ITER 100
+#define MAX_ITER 1000
 
 int image_sizes[] = {128, 160, 192, 224, 256};
 
@@ -52,6 +52,9 @@ uint64_t checksum = 0;
 uint32_t start_time = 0;
 uint32_t end_time = 0;
 uint32_t execution_time = 0;
+//Result storage
+uint64_t checksums_fixed[5] = {0};
+uint32_t execution_times_fixed[5] = {0};
 
 /* USER CODE END PV */
 
@@ -100,14 +103,19 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
+  for (int i = 0; i < 5; i++){
   //TODO: Visual indicator: Turn on LED0 to signal processing start
+	  int sizes = image_sizes[i];
   	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
   	  //TODO: Benchmark and Profile Performance
   	  start_time = HAL_GetTick();
-  	  checksum = calculate_mandelbrot_fixed_point_arithmetic(128, 128, MAX_ITER);
+  	  checksum = calculate_mandelbrot_fixed_point_arithmetic(sizes, sizes, MAX_ITER);
   	  end_time = HAL_GetTick();
+
   	  execution_time = end_time - start_time;
+      checksums_fixed[i] = checksum;
+      execution_times_fixed[i] = execution_time;
 
   	  //TODO: Visual indicator: Turn on LED1 to signal processing start
   	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
@@ -118,7 +126,8 @@ int main(void)
 
   	  // TODO: Turn OFF LEDs
   	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
-
+  }
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
