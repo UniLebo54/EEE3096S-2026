@@ -1,5 +1,3 @@
-adapt this code for stm32f4
-
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -46,14 +44,24 @@ adapt this code for stm32f4
 /* USER CODE BEGIN PV */
 //TODO: Define variables you think you might need
 // - Performance timing variables (e.g execution time, throughput, pixels per second, clock cycles)
-#define MAX_ITER 100
+#define MAX_ITER 1000
 
+int max_iteration[] = {100, 420, 600, 800, 1000};
 int image_sizes[] = {128, 160, 192, 224, 256};
-
+// Results storage
+uint64_t checksums_fixed[5] = {0};
+uint64_t checksums_double[5] = {0};
+uint32_t execution_times_fixed[5] = {0};
+uint32_t execution_times_double[5] = {0};
+//Current test variables
 uint64_t checksum = 0;
 uint32_t start_time = 0;
 uint32_t end_time = 0;
 uint32_t execution_time = 0;
+// Test state
+uint8_t current_size_index = 0;
+uint8_t test_type = 0;  // 0 = fixed point, 1 = double
+uint8_t test_complete = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,6 +70,7 @@ static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
+void run_all_tests(void);
 
 /* USER CODE END PFP */
 
@@ -100,24 +109,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  //TODO: Visual indicator: Turn on LED0 to signal processing start
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-
-  //TODO: Benchmark and Profile Performance
-  start_time = HAL_GetTick();
-  checksum = calculate_double(128, 128, MAX_ITER);
-  end_time = HAL_GetTick();
-  execution_time = end_time - start_time;
-
-  //TODO: Visual indicator: Turn on LED1 to signal processing start
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
-
-  //TODO: Keep the LEDs ON for 2s
-  HAL_Delay(2000);
-
-  // TODO: Turn OFF LEDs
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
-  /* USER CODE END 2 */
+  run_all_tests();
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -215,6 +207,33 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 //TODO: Function signatures you defined previously , implement them here
+
+void run_all_tests(void){
+	for (int i = 0; i < 5; i++) {
+		  int size = image_sizes[i];
+	  //TODO: Visual indicator: Turn on LED0 to signal processing start
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+
+	  //TODO: Benchmark and Profile Performance
+	  start_time = HAL_GetTick();
+	  checksum = calculate_mandelbrot_fixed_point_arithmetic(size, size, MAX_ITER);
+	  end_time = HAL_GetTick();
+	  execution_time = end_time - start_time;
+
+	  checksums_fixed[i] = checksum;
+	  execution_times_fixed[i] = execution_time;
+
+	  //TODO: Visual indicator: Turn on LED1 to signal processing start
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+
+	  //TODO: Keep the LEDs ON for 2s
+	  HAL_Delay(2000);
+
+	  // TODO: Turn OFF LEDs
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
+	  /* USER CODE END 2 */
+	  }
+}
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations){
     uint64_t checksum = 0;
     const int32_t scale = 1 << 20;
