@@ -1,6 +1,5 @@
 /*
  * assembly.s
- *
  */
 
  @ DO NOT EDIT
