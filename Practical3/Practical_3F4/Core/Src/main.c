@@ -44,20 +44,29 @@
 /* USER CODE BEGIN PV */
 //TODO: Define variables you think you might need
 // - Performance timing variables (e.g execution time, throughput, pixels per second, clock cycles)
-#define MAX_ITER 1000
+#define MAX_ITER 420
 
-int max_iteration[] = {100, 420, 600, 800, 1000};
 int image_sizes[] = {128, 160, 192, 224, 256};
 // Results storage
 uint64_t checksums_fixed[5] = {0};
 uint64_t checksums_double[5] = {0};
-uint32_t execution_times_fixed[5] = {0};
-uint32_t execution_times_double[5] = {0};
+uint32_t execution_times_fixed[5] = {0}; // Time in ms
+uint32_t execution_times_double[5] = {0}; // Time in ms
+uint32_t execution_cycles_fixed[5] = {0};   // NEW: Cycles for fixed point
+uint32_t execution_cycles_double[5] = {0};  // NEW: Cycles for double
+float throughput_fixed_mps[5] = {0};
+
 //Current test variables
 uint64_t checksum = 0;
 uint32_t start_time = 0;
 uint32_t end_time = 0;
 uint32_t execution_time = 0;
+uint32_t start_cycles = 0;  // NEW: For DWT
+uint32_t end_cycles = 0;    // NEW: For DWT
+uint32_t delta_cycles = 0;  // NEW: For DWT
+uint32_t total_pixels = 0;
+float throughput_mps = 0.0f;
+
 // Test state
 uint8_t current_size_index = 0;
 uint8_t test_type = 0;  // 0 = fixed point, 1 = double
@@ -71,11 +80,19 @@ static void MX_GPIO_Init(void);
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
 void run_all_tests(void);
-
+void EnableDWT(void); // NEW: Function to enable DWT
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// NEW: Function to enable the DWT Cycle Counter
+void EnableDWT(void) {
+    // Unlock access to the DWT and ITM units (from CoreDebug)
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    // Enable the DWT cycle counter
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
 
 /* USER CODE END 0 */
 
@@ -103,7 +120,8 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  // NEW: Enable the DWT Cycle Counter as soon as system clock is configured
+  EnableDWT();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -211,27 +229,43 @@ static void MX_GPIO_Init(void)
 void run_all_tests(void){
 	for (int i = 0; i < 5; i++) {
 		  int size = image_sizes[i];
+		  total_pixels = size * size;
 	  //TODO: Visual indicator: Turn on LED0 to signal processing start
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
-	  //TODO: Benchmark and Profile Performance
-	  start_time = HAL_GetTick();
+	  //TODO: Benchmark and Profile Performance for FIXED POINT
+	  start_time = HAL_GetTick(); // Get ms timestamp
+	  DWT->CYCCNT = 0;               // Reset cycle counter
+	  start_cycles = DWT->CYCCNT;    // Read start cycles (should be ~0)
 	  checksum = calculate_mandelbrot_fixed_point_arithmetic(size, size, MAX_ITER);
-	  end_time = HAL_GetTick();
+	  end_cycles = DWT->CYCCNT;      // Read end cycles immediately after function returns
+	  end_time = HAL_GetTick();   // Get ms timestamp
+
 	  execution_time = end_time - start_time;
+	  delta_cycles = end_cycles - start_cycles;
+	  if (execution_time > 0) {
+		  throughput_mps = (total_pixels * 120000000) / delta_cycles;
+	  }
+	  else {
+		  throughput_mps = 0.0;
+	  }
+
 
 	  checksums_fixed[i] = checksum;
 	  execution_times_fixed[i] = execution_time;
+	  execution_cycles_fixed[i] = delta_cycles; // Store cycle count
+	  throughput_fixed_mps[i] = throughput_mps;
 
-	  //TODO: Visual indicator: Turn on LED1 to signal processing start
+	  //TODO: Visual indicator: Turn on LED1 to signal processing done for fixed point
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+	  HAL_Delay(1000); // Keep LED on for 1s
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); // Turn off LED1
 
-	  //TODO: Keep the LEDs ON for 2s
-	  HAL_Delay(2000);
-
-	  // TODO: Turn OFF LEDs
+	  // TODO: Turn OFF all LEDs before next test
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
-	  /* USER CODE END 2 */
+
+	  // Delay between test sizes
+	  HAL_Delay(100);
 	  }
 }
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations){
@@ -264,34 +298,6 @@ uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int 
       }
   }
     return checksum;
-}
-
-//TODO: Mandelbroat using variable type double
-uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations){
-	uint64_t checksum = 0;
-	const double x_scale = 3.5 / width;
-	const double y_scale = 2.0 / height;
-
-	 for ( int y = 0; y < height ; y++){
-		 double y0 = y * y_scale - 1.0;
-		 for (int x=0; x < width; x++){
-			 double x0 = x * x_scale - 2.5;
-			 double xi = 0, yi = 0;
-			 int iteration = 0;
-
-			 while (iteration < max_iterations){
-				 double xi_sq = xi * xi;
-				 double yi_sq = yi * yi;
-				 if (( xi_sq + yi_sq) > 4.0) break;
-				 double temp = xi_sq - yi_sq;
-				 yi = 2 * xi * yi + y0;
-				 xi = temp + x0;
-				 iteration++;
-			 }
-			 checksum += iteration;
-		 }
-	 }
-	 return checksum;
 }
 
 /* USER CODE END 4 */
