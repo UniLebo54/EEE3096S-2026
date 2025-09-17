@@ -244,7 +244,7 @@ void run_all_tests(void){
 	  execution_time = end_time - start_time;
 	  delta_cycles = end_cycles - start_cycles;
 	  if (execution_time > 0) {
-		  throughput_mps = (total_pixels * 120000000) / delta_cycles;
+		  throughput_mps = (total_pixels / execution_time);
 	  }
 	  else {
 		  throughput_mps = 0.0;
