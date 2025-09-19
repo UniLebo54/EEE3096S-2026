@@ -262,12 +262,9 @@ uint32_t get_binary_size(void)
 {
     // Calculate code size (text section)
     uint32_t code_size = (uint32_t)&_sidata - (uint32_t)&_sdata;
-
     // Calculate data size (initialized data)
     uint32_t data_size = (uint32_t)&_edata - (uint32_t)&_sdata;
-
-    // Calculate bss size (uninitialized data)
-    //uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
+    uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
 
     // Total binary size (code + data)
     return code_size + data_size;

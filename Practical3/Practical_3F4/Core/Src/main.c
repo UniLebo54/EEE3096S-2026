@@ -49,11 +49,8 @@
 int image_sizes[] = {128, 160, 192, 224, 256};
 // Results storage
 uint64_t checksums_fixed[5] = {0};
-uint64_t checksums_double[5] = {0};
 uint32_t execution_times_fixed[5] = {0}; // Time in ms
-uint32_t execution_times_double[5] = {0}; // Time in ms
-uint32_t execution_cycles_fixed[5] = {0};   // NEW: Cycles for fixed point
-uint32_t execution_cycles_double[5] = {0};  // NEW: Cycles for double
+uint32_t execution_cycles_fixed[5] = {0};   // Cycles for fixed point
 float throughput_fixed_mps[5] = {0};
 
 //Current test variables
@@ -61,9 +58,9 @@ uint64_t checksum = 0;
 uint32_t start_time = 0;
 uint32_t end_time = 0;
 uint32_t execution_time = 0;
-uint32_t start_cycles = 0;  // NEW: For DWT
-uint32_t end_cycles = 0;    // NEW: For DWT
-uint32_t delta_cycles = 0;  // NEW: For DWT
+uint32_t start_cycles = 0;  
+uint32_t end_cycles = 0;    
+uint32_t delta_cycles = 0;  
 uint32_t total_pixels = 0;
 float throughput_mps = 0.0f;
 
@@ -132,8 +129,40 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  run_all_tests();
-	  total_binary_size	= get_binary_size();
+	for (int i = 0; i < 5; i++) {
+		  int size = image_sizes[i];
+		  total_pixels = size * size;
+	  //TODO: Visual indicator: Turn on LED0 to signal processing start
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+
+	  //TODO: Benchmark and Profile Performance for FIXED POINT
+	  start_time = HAL_GetTick(); // Get ms timestamp
+	  DWT->CYCCNT = 0;               // Reset cycle counter
+	  start_cycles = DWT->CYCCNT;    // Read start cycles (should be ~0)
+	  checksum = calculate_mandelbrot_fixed_point_arithmetic(size, size, MAX_ITER);
+	  end_cycles = DWT->CYCCNT;      // Read end cycles immediately after function returns
+	  end_time = HAL_GetTick();   // Get ms timestamp
+
+	  execution_time = end_time - start_time;
+	  delta_cycles = end_cycles - start_cycles;
+
+
+	  checksums_fixed[i] = checksum;
+	  execution_times_fixed[i] = execution_time;
+	  execution_cycles_fixed[i] = delta_cycles; // Store cycle count
+	  throughput_fixed_mps[i] = throughput_mps;
+
+	  //TODO: Visual indicator: Turn on LED1 to signal processing done for fixed point
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+	  HAL_Delay(1000); // Keep LED on for 1s
+
+	  // TODO: Turn OFF all LEDs before next test
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
+
+	  // Delay between test sizes
+	  HAL_Delay(100);
+	  }
+  total_binary_size	= get_binary_size();
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -232,47 +261,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 //TODO: Function signatures you defined previously , implement them here
 
-void run_all_tests(void){
-	for (int i = 0; i < 5; i++) {
-		  int size = image_sizes[i];
-		  //total_pixels = size * size;
-	  //TODO: Visual indicator: Turn on LED0 to signal processing start
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-
-	  //TODO: Benchmark and Profile Performance for FIXED POINT
-	  start_time = HAL_GetTick(); // Get ms timestamp
-	  //DWT->CYCCNT = 0;               // Reset cycle counter
-	  //start_cycles = DWT->CYCCNT;    // Read start cycles (should be ~0)
-	  checksum = calculate_mandelbrot_fixed_point_arithmetic(size, size, MAX_ITER);
-	  //end_cycles = DWT->CYCCNT;      // Read end cycles immediately after function returns
-	  end_time = HAL_GetTick();   // Get ms timestamp
-
-	  /*execution_time = end_time - start_time;
-	  delta_cycles = end_cycles - start_cycles;
-	  if (execution_time > 0) {
-		  throughput_mps = (total_pixels / execution_time);
-	  }
-	  else {
-		  throughput_mps = 0.0;
-	  }*/
-
-
-	  checksums_fixed[i] = checksum;
-	  execution_times_fixed[i] = execution_time;
-	  //execution_cycles_fixed[i] = delta_cycles; // Store cycle count
-	  //throughput_fixed_mps[i] = throughput_mps;
-
-	  //TODO: Visual indicator: Turn on LED1 to signal processing done for fixed point
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
-	  HAL_Delay(1000); // Keep LED on for 1s
-
-	  // TODO: Turn OFF all LEDs before next test
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
-
-	  // Delay between test sizes
-	  HAL_Delay(100);
-	  }
-}
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations){
     uint64_t checksum = 0;
     const int32_t scale = 1 << 20;
