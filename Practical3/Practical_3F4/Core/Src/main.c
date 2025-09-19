@@ -67,19 +67,24 @@ uint32_t delta_cycles = 0;  // NEW: For DWT
 uint32_t total_pixels = 0;
 float throughput_mps = 0.0f;
 
+uint32_t total_binary_size = 0;
+
 // Test state
 uint8_t current_size_index = 0;
 uint8_t test_type = 0;  // 0 = fixed point, 1 = double
 uint8_t test_complete = 0;
+/* USER CODE END PV */
+extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _sstack;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
+//TODO: Define any function prototypes you might need such as the calculate Mandelbrot function among others
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
-void run_all_tests(void);
+uint32_t get_binary_size(void);
 void EnableDWT(void); // NEW: Function to enable DWT
 /* USER CODE END PFP */
 
@@ -128,6 +133,7 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   run_all_tests();
+	  total_binary_size	= get_binary_size();
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -229,37 +235,36 @@ static void MX_GPIO_Init(void)
 void run_all_tests(void){
 	for (int i = 0; i < 5; i++) {
 		  int size = image_sizes[i];
-		  total_pixels = size * size;
+		  //total_pixels = size * size;
 	  //TODO: Visual indicator: Turn on LED0 to signal processing start
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
 	  //TODO: Benchmark and Profile Performance for FIXED POINT
 	  start_time = HAL_GetTick(); // Get ms timestamp
-	  DWT->CYCCNT = 0;               // Reset cycle counter
-	  start_cycles = DWT->CYCCNT;    // Read start cycles (should be ~0)
+	  //DWT->CYCCNT = 0;               // Reset cycle counter
+	  //start_cycles = DWT->CYCCNT;    // Read start cycles (should be ~0)
 	  checksum = calculate_mandelbrot_fixed_point_arithmetic(size, size, MAX_ITER);
-	  end_cycles = DWT->CYCCNT;      // Read end cycles immediately after function returns
+	  //end_cycles = DWT->CYCCNT;      // Read end cycles immediately after function returns
 	  end_time = HAL_GetTick();   // Get ms timestamp
 
-	  execution_time = end_time - start_time;
+	  /*execution_time = end_time - start_time;
 	  delta_cycles = end_cycles - start_cycles;
 	  if (execution_time > 0) {
 		  throughput_mps = (total_pixels / execution_time);
 	  }
 	  else {
 		  throughput_mps = 0.0;
-	  }
+	  }*/
 
 
 	  checksums_fixed[i] = checksum;
 	  execution_times_fixed[i] = execution_time;
-	  execution_cycles_fixed[i] = delta_cycles; // Store cycle count
-	  throughput_fixed_mps[i] = throughput_mps;
+	  //execution_cycles_fixed[i] = delta_cycles; // Store cycle count
+	  //throughput_fixed_mps[i] = throughput_mps;
 
 	  //TODO: Visual indicator: Turn on LED1 to signal processing done for fixed point
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
 	  HAL_Delay(1000); // Keep LED on for 1s
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); // Turn off LED1
 
 	  // TODO: Turn OFF all LEDs before next test
 	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
@@ -298,6 +303,20 @@ uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int 
       }
   }
     return checksum;
+}
+uint32_t get_binary_size(void)
+{
+    // Calculate code size (text section)
+    uint32_t code_size = (uint32_t)&_sidata - (uint32_t)&_sdata;
+
+    // Calculate data size (initialized data)
+    uint32_t data_size = (uint32_t)&_edata - (uint32_t)&_sdata;
+
+    // Calculate bss size (uninitialized data)
+    //uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
+
+    // Total binary size (code + data)
+    return code_size + data_size;
 }
 
 /* USER CODE END 4 */

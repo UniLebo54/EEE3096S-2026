@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +44,7 @@
 /* USER CODE BEGIN PV */
 //TODO: Define variables you think you might need
 // - Performance timing variables (e.g execution time, throughput, pixels per second, clock cycles)
-#define MAX_ITER 1000
+#define MAX_ITER 100
 
 int image_sizes[] = {128, 160, 192, 224, 256};
 
@@ -52,10 +52,14 @@ uint64_t checksum = 0;
 uint32_t start_time = 0;
 uint32_t end_time = 0;
 uint32_t execution_time = 0;
+uint32_t total_program_time = 0;
+uint32_t total_binary_size = 0;
 //Result storage
 uint64_t checksums_fixed[5] = {0};
 uint32_t execution_times_fixed[5] = {0};
 
+// Binary file size information (these will be set by the linker)
+extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _sstack;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +69,8 @@ static void MX_GPIO_Init(void);
 //TODO: Define any function prototypes you might need such as the calculate Mandelbrot function among others
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
+uint32_t get_binary_size(void);
+void print_program_info(void);
 
 /* USER CODE END PFP */
 
@@ -81,7 +87,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  uint32_t program_start_time = HAL_GetTick();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -103,33 +109,32 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  for (int i = 0; i < 5; i++){
-  //TODO: Visual indicator: Turn on LED0 to signal processing start
-	  int sizes = image_sizes[i];
-  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-
-  	  //TODO: Benchmark and Profile Performance
-  	  start_time = HAL_GetTick();
-  	  checksum = calculate_mandelbrot_fixed_point_arithmetic(sizes, sizes, MAX_ITER);
-  	  end_time = HAL_GetTick();
-
-  	  execution_time = end_time - start_time;
-      checksums_fixed[i] = checksum;
-      execution_times_fixed[i] = execution_time;
-
-  	  //TODO: Visual indicator: Turn on LED1 to signal processing start
-  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
-
-
-  	  //TODO: Keep the LEDs ON for 2s
-  	  HAL_Delay(2000);
-
-  	  // TODO: Turn OFF LEDs
-  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
-  }
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
   /* USER CODE END 2 */
+  	for (int i = 0; i < 5; i++){
+  	  //TODO: Visual indicator: Turn on LED0 to signal processing start
+  		  int sizes = image_sizes[i];
+  	  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
+  	  	  //TODO: Benchmark and Profile Performance
+  	  	  start_time = HAL_GetTick();
+  	  	  checksum = calculate_mandelbrot_fixed_point_arithmetic(sizes, sizes, MAX_ITER);
+  	  	  end_time = HAL_GetTick();
+
+  	  	  execution_time = end_time - start_time;
+  	      checksums_fixed[i] = checksum;
+  	      execution_times_fixed[i] = execution_time;
+
+  	  	  //TODO: Visual indicator: Turn on LED1 to signal processing start
+  	  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+
+
+  	  	  //TODO: Keep the LEDs ON for 2s
+  	  	  HAL_Delay(2000);
+
+  	  	  // TODO: Turn OFF LEDs
+  	  	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_RESET);
+  	  }
+	  total_binary_size	= get_binary_size();
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -249,6 +254,24 @@ uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int 
     return checksum;
 }
 
+/**
+  * @brief  Calculate the binary file size using linker symbols
+  * @retval uint32_t Size of the binary in bytes
+  */
+uint32_t get_binary_size(void)
+{
+    // Calculate code size (text section)
+    uint32_t code_size = (uint32_t)&_sidata - (uint32_t)&_sdata;
+
+    // Calculate data size (initialized data)
+    uint32_t data_size = (uint32_t)&_edata - (uint32_t)&_sdata;
+
+    // Calculate bss size (uninitialized data)
+    //uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
+
+    // Total binary size (code + data)
+    return code_size + data_size;
+}
 /* USER CODE END 4 */
 
 /**
@@ -268,7 +291,7 @@ void Error_Handler(void)
 #ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
+  * where the assert_param error has occurred.
   * @param  file: pointer to the source file name
   * @param  line: assert_param error line source number
   * @retval None
