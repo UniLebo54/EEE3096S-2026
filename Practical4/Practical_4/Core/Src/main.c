@@ -35,8 +35,8 @@
 /* USER CODE BEGIN PD */
 // Define values for variables
 #define NS        128  // Number of samples in LUT
-#define TIM2CLK   16000000  // STM Clock frequency: 16 MHz (check your .ioc file to confirm)
-#define F_SIGNAL  1000  // Frequency of output analog signal - 1kHz starting point
+#define TIM2CLK   16000000  // STM Clock frequency: 16 MHz
+#define F_SIGNAL  1000  // Frequency of output analog signal - 1kHz
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,7 +50,7 @@ TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
-// LUT arrays - fixed definitions
+// LUT arrays
 uint32_t Sin_LUT[NS] = {2048, 2148, 2248, 2348, 2447, 2545, 2642, 2737,
     2831, 2923, 3013, 3100, 3185, 3267, 3346, 3423,
     3495, 3565, 3630, 3692, 3750, 3804, 3853, 3898,
@@ -164,7 +164,7 @@ uint8_t current_waveform = 0; // 0=Sine, 1=Sawtooth, 2=Triangle, 3=Piano, 4=Guit
 uint32_t last_button_time = 0;
 #define DEBOUNCE_DELAY 200 // 200ms debounce delay
 
-// TODO: Equation to calculate TIM2_Ticks
+// TIM2_Ticks calculation
 uint32_t TIM2_Ticks = (TIM2CLK / (NS * F_SIGNAL)); // How often to write new LUT value
 uint32_t DestAddress = (uint32_t) &(TIM3->CCR3); // Write LUT TO TIM3->CCR3 to modify PWM duty cycle
 
@@ -219,9 +219,12 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  // Define waveform names for LCD display
+  char* waveform_names[] = {"Sine", "Sawtooth", "Triangle", "Piano", "Guitar", "Drum"};
+  uint8_t current_waveform = 0; // 0=Sine, 1=Sawtooth, 2=Triangle, 3=Piano, 4=Guitar, 5=Drum
+
   // Initialize LCD
-  LCD_Init();
-  LCD_Clear();
+  init_LCD();
 
   // Start TIM3 in PWM mode on channel 3
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
@@ -233,8 +236,9 @@ int main(void)
   HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)Sin_LUT, DestAddress, NS);
 
   // Write current waveform to LCD (Sine is the first waveform)
-  LCD_SetCursor(0, 0);
-  LCD_WriteString(waveform_names[current_waveform]);
+  lcd_command(CLEAR);
+  delay(2000);
+  lcd_putstring(waveform_names[current_waveform]);
 
   // Enable DMA (start transfer from LUT to CCR)
   __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_CC1);
@@ -511,9 +515,9 @@ void switch_waveform(void) {
     current_waveform = (current_waveform + 1) % 6;
     
     // Update LCD display
-    LCD_Clear();
-    LCD_SetCursor(0, 0);
-    LCD_WriteString(waveform_names[current_waveform]);
+    lcd_command(CLEAR);
+    delay(2000);
+    lcd_putstring(waveform_names[current_waveform]);
     
     // Restart DMA with new LUT
     HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)LUTs[current_waveform], DestAddress, NS);
