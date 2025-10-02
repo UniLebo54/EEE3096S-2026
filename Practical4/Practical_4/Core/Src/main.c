@@ -154,7 +154,7 @@ uint32_t Drum_LUT = {2036, 3354, 1870, 2112, 2057, 3358, 1902, 1932,
 
 
 // TODO: Equation to calculate TIM2_Ticks
-uint32_t TIM2_Ticks = 0; // How often to write new LUT value
+uint32_t TIM2_Ticks = (TIM2CLK / (NS * F_SIGNAL)); // How often to write new LUT value
 uint32_t DestAddress = (uint32_t) &(TIM3->CCR3); // Write LUT TO TIM3->CCR3 to modify PWM duty cycle
 
 
@@ -208,16 +208,32 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  // TODO: Start TIM3 in PWM mode on channel 3
+ /* USER CODE BEGIN 2 */
+// Define waveform names for LCD display
+char* waveform_names[] = {"Sine", "Sawtooth", "Triangle", "Piano", "Guitar", "Drum"};
+uint8_t current_waveform = 0; // 0=Sine, 1=Sawtooth, 2=Triangle, 3=Piano, 4=Guitar, 5=Drum
 
-  // TODO: Start TIM2 in Output Compare (OC) mode on channel 1
+// Initialize LCD
+LCD_Init();
+LCD_Clear();
 
-  // TODO: Start DMA in IT mode on TIM2->CH1. Source is LUT and Dest is TIM3->CCR3; start with Sine LUT
+// TODO: Start TIM3 in PWM mode on channel 3
+HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 
-  // TODO: Write current waveform to LCD(Sine is the first waveform)
+// TODO: Start TIM2 in Output Compare (OC) mode on channel 1  
+HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1);
 
-  // TODO: Enable DMA (start transfer from LUT to CCR)
+// TODO: Start DMA in IT mode on TIM2->CH1. Source is LUT and Dest is TIM3->CCR3; start with Sine LUT
+HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)Sin_LUT, DestAddress, NS);
 
+// TODO: Write current waveform to LCD (Sine is the first waveform)
+LCD_SetCursor(0, 0);
+LCD_WriteString(waveform_names[current_waveform]);
+
+// TODO: Enable DMA (start transfer from LUT to CCR)
+__HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_CC1);
+
+/* USER CODE END 2 */
   /* USER CODE END 2 */
 
   /* Infinite loop */
