@@ -33,10 +33,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// Define values for variables
+// TODO: Add values for below variables
 #define NS        128  // Number of samples in LUT
 #define TIM2CLK   16000000  // STM Clock frequency: 16 MHz
-#define F_SIGNAL  1000  // Frequency of output analog signal - 1kHz
+#define F_SIGNAL  0.5  // Frequency of output analog signal - 1kHz
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,7 +50,7 @@ TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim2_ch1;
 
 /* USER CODE BEGIN PV */
-// LUT arrays
+// TODO: Add code for global variables, including LUTs
 uint32_t Sin_LUT[NS] = {2048, 2148, 2248, 2348, 2447, 2545, 2642, 2737,
     2831, 2923, 3013, 3100, 3185, 3267, 3346, 3423,
     3495, 3565, 3630, 3692, 3750, 3804, 3853, 3898,
@@ -164,7 +164,7 @@ uint8_t current_waveform = 0; // 0=Sine, 1=Sawtooth, 2=Triangle, 3=Piano, 4=Guit
 uint32_t last_button_time = 0;
 #define DEBOUNCE_DELAY 200 // 200ms debounce delay
 
-// TIM2_Ticks calculation
+// TODO: Equation to calculate TIM2_Ticks
 uint32_t TIM2_Ticks = (TIM2CLK / (NS * F_SIGNAL)); // How often to write new LUT value
 uint32_t DestAddress = (uint32_t) &(TIM3->CCR3); // Write LUT TO TIM3->CCR3 to modify PWM duty cycle
 
@@ -178,7 +178,6 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 void EXTI0_IRQHandler(void);
-void switch_waveform(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -226,21 +225,21 @@ int main(void)
   // Initialize LCD
   init_LCD();
 
-  // Start TIM3 in PWM mode on channel 3
+  // TODO: Start TIM3 in PWM mode on channel 3
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 
-  // Start TIM2 in Output Compare (OC) mode on channel 1  
+  // TODO: Start TIM2 in Output Compare (OC) mode on channel 1
   HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1);
 
-  // Start DMA in IT mode on TIM2->CH1. Source is LUT and Dest is TIM3->CCR3; start with Sine LUT
+  // TODO: Start DMA in IT mode on TIM2->CH1. Source is LUT and Dest is TIM3->CCR3; start with Sine LUT
   HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)Sin_LUT, DestAddress, NS);
 
-  // Write current waveform to LCD (Sine is the first waveform)
+  // TODO: Write current waveform to LCD(Sine is the first waveform)
   lcd_command(CLEAR);
   delay(2000);
   lcd_putstring(waveform_names[current_waveform]);
 
-  // Enable DMA (start transfer from LUT to CCR)
+  // TODO: Enable DMA (start transfer from LUT to CCR)
   __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_CC1);
   /* USER CODE END 2 */
 
@@ -505,37 +504,35 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-// Function to switch to next waveform
-void switch_waveform(void) {
-    // Stop DMA transfer
-    __HAL_TIM_DISABLE_DMA(&htim2, TIM_DMA_CC1);
-    HAL_DMA_Abort_IT(&hdma_tim2_ch1);
-    
-    // Move to next waveform (cycle through 0-5)
-    current_waveform = (current_waveform + 1) % 6;
-    
-    // Update LCD display
-    lcd_command(CLEAR);
-    delay(2000);
-    lcd_putstring(waveform_names[current_waveform]);
-    
-    // Restart DMA with new LUT
-    HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)LUTs[current_waveform], DestAddress, NS);
-    __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_CC1);
-}
 
 // Button interrupt handler
 void EXTI0_IRQHandler(void) {
     uint32_t current_time = HAL_GetTick();
-    
     // Debounce check - only process if enough time has passed since last press
     if ((current_time - last_button_time) > DEBOUNCE_DELAY) {
         last_button_time = current_time;
-        
-        // Switch to next waveform
-        switch_waveform();
+
+        	// Switch to next waveform
+
+        // TODO: Disable DMA transfer and abort IT, then start DMA in IT mode with new LUT and re-enable transfer
+        // HINT: Consider using C's "switch" function to handle LUT changes
+		__HAL_TIM_DISABLE_DMA(&htim2, TIM_DMA_CC1);
+		HAL_DMA_Abort_IT(&hdma_tim2_ch1);
+
+		// Move to next waveform (cycle through 0-5)
+		current_waveform = (current_waveform + 1) % 6;
+
+		// Update LCD display
+		lcd_command(CLEAR);
+		delay(2000);
+		lcd_putstring(waveform_names[current_waveform]);
+
+	    // TODO: Debounce using HAL_GetTick()
+		HAL_DMA_Start_IT(&hdma_tim2_ch1, (uint32_t)LUTs[current_waveform], DestAddress, NS);
+		__HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_CC1);
     }
-    
+
+
     HAL_GPIO_EXTI_IRQHandler(Button0_Pin); // Clear interrupt flags
 }
 /* USER CODE END 4 */
